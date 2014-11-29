@@ -4,6 +4,8 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,10 +29,8 @@ public class App {
 
 	public static void main(String[] args) throws IOException {
 
-		String[] x = new String[] { "AAAA", "ABAB", "ABBA", "AABB", "BBBB",
-				"BABA", "BAAB", "BBAA" };
-		String[] y = new String[] { "AAAB", "AABA", "ABAA", "BAAA", "BBBA",
-				"BBAB", "BABB", "ABBB" };
+		String[] x = new String[] { "AAAA", "ABAB", "ABBA", "AABB", "BBBB", "BABA", "BAAB", "BBAA" };
+		String[] y = new String[] { "AAAB", "AABA", "ABAA", "BAAA", "BBBA", "BBAB", "BABB", "ABBB" };
 
 		String rule = "A,A;B,B|AA,BB;AB,BA|AAA,ABA;AAA,BBB;AAA,BAB;ABA,BBB;ABA,BAB;BBB,BAB;AAB,BAA;AAB,ABB;AAB,BBA;BAA,ABB;BAA,BBA;ABB,BBA|";
 
@@ -56,6 +56,9 @@ public class App {
 				new FileInputStream(file), "UTF-8");// 考虑到编码格式
 		BufferedReader bufferedReader = new BufferedReader(read);
 		String lineTxt = null;
+		int[] addupX = new int[100];
+		int[] addupO = new int[100];
+		int seq_x_max = 0, seq_o_max = 0;
 		while ((lineTxt = bufferedReader.readLine()) != null) {
 
 			String strSource = lineTxt;
@@ -67,17 +70,53 @@ public class App {
 			for (int i = 0; i < header + 1; i++)
 				logger.debug("-");
 			
-			for (int i = header + 1; i < result.length; i++) {
-				if (result[i])
+			boolean last = result[0];
+			int count = 1;
+			int countTrue = 0, countFalse = 0;
+			if(last){
+				countTrue ++ ;
+				logger.debug("o");
+			} else {
+				countFalse ++ ;
+				logger.debug("x");
+			}
+			
+			for(int i=1; i<result.length; i++){
+				if (result[i]) {
+					countTrue++;
 					logger.debug("o");
-				else
+				} else {
+					countFalse++;
 					logger.debug("x");
+				}
+				
+				if(result[i] == last){
+					count ++ ;
+				} else {
+					if(last){
+						addupO[count-1]++;
+						seq_o_max = seq_o_max>count?seq_o_max:count;
+					}
+					else{
+						addupX[count-1]++;
+						seq_x_max = seq_x_max>count?seq_x_max:count;
+					}
+					last = result[i];
+					count = 1;
+				}
 			}
 
-			logger.debug("\r\n");
+			logger.debug(" [ x:{} ({}%), o:{} ({}%) ]\r\n", 
+					countFalse, ((float)countFalse*100/(float)(countFalse+countTrue)), 
+					countTrue, ((float)countTrue*100/(float)(countFalse+countTrue)));
 			logger.debug("{}\r\n", strSource);
 
 			step3(result, header);
+		}
+		
+		int max = seq_x_max>seq_o_max?seq_x_max:seq_o_max;
+		for(int i=0; i<max; i++){
+			logger.debug("SEQ {} : {x:{}, o:{}}\r\n", i+1, addupX[i], addupO[i]);
 		}
 		read.close();
 
@@ -90,7 +129,28 @@ public class App {
 	public static void step3(boolean[] source, int length) {
 		int sum = 0;
 		int indexSourceStep3 = 0;
-		for (int indexSource = length + 1; indexSource < source.length; indexSource++) {
+		int max = 0;
+		boolean foundMax = false;
+		for (boolean e : source){
+			if( max < sourceStep3[indexSourceStep3] && !foundMax){
+				max = sourceStep3[indexSourceStep3];
+			}
+			
+			if (e) {
+				sum += sourceStep3[indexSourceStep3];
+				logger.debug("+{}", sourceStep3[indexSourceStep3]);
+				if (indexSourceStep3 != 0)
+					indexSourceStep3 -= 1;
+			} else {
+				sum -= sourceStep3[indexSourceStep3];
+				logger.debug("-{}", sourceStep3[indexSourceStep3]);
+				indexSourceStep3 += 1;
+			}
+			
+			if(sum >= 10)
+				foundMax = true;
+		}
+		/*for (int indexSource = length + 1; indexSource < source.length; indexSource++) {
 			if (source[indexSource]) {
 				sum += sourceStep3[indexSourceStep3];
 				logger.debug("+{}", sourceStep3[indexSourceStep3]);
@@ -101,12 +161,14 @@ public class App {
 				logger.debug("-{}", sourceStep3[indexSourceStep3]);
 				indexSourceStep3 += 1;
 			}
-		}
-		logger.debug(" = {} \r\n", sum);
+		}*/
+		logger.debug(" = {} [ MAX: {} ]\r\n", sum, max);
 	}
 
 	public static boolean[] step2(String source, int length) {
-		boolean[] rtn = new boolean[source.length()];
+		
+		boolean[] rtn = new boolean[source.length()-length-1];
+		//boolean[] rtn = new boolean[source.length()];
 		int index = 1;
 		while (true) {
 
@@ -119,7 +181,8 @@ public class App {
 				String second = source.substring(index + length, index + length
 						+ (i + 1));
 				isPair = pair(first, second);
-				rtn[index + length + i] = isPair;
+				//rtn[index + length + i] = isPair;
+				rtn[index -1 + i] = isPair;
 			}
 			if (i == 0)
 				break;
