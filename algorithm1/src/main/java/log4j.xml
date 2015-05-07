@@ -56,6 +56,11 @@
 		<appender-ref ref="DATABASE" />
 	</appender>  <!--通过<logger></logger>的定义可以将各个包中的类日志输出到不同的日志文件中 -->
 	
+	<logger name="process" additivity="false">
+		<level value="DEBUG" />
+		<appender-ref ref="CONSOLE-CLEAN" />
+		<appender-ref ref="FILE-CLEAN" />
+	</logger>
 	<logger name="e_commerce.algorithm1.App" additivity="false">
 		<level value="DEBUG" />
 		<appender-ref ref="CONSOLE-CLEAN" />

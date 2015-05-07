@@ -4,8 +4,6 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,13 +11,14 @@ import org.slf4j.LoggerFactory;
 import e_commerce.algorithm1.App;
 import pairgenerator.PairComboGenerator;
 import pairs.IPair;
+import process.IProcessor;
+import process.Start;
 
-/**
- * Hello world!
- *
- */
 public class App {
 	
+	public static int cycleStep = 3;
+	public static String Class3X = "process.CycleNegtive";
+	public static String Class3O = "process.CyclePositive";
 	private static final Logger logger = LoggerFactory.getLogger(App.class);
 	
 	private static IPair pairEngine;
@@ -52,6 +51,15 @@ public class App {
 		pairEngine = new PairComboGenerator().generate(rule);
 
 		String file = args[0];
+		String output = args[1];
+		String fileName = null;
+		{
+			String[] array = file.split("/");
+			fileName = array[array.length-1];
+			array = fileName.split("\\.");
+			fileName = String.format("%s%s_step%d.txt", output, array[0], cycleStep);
+		}
+		FileOutput.init(fileName);
 		InputStreamReader read = new InputStreamReader(
 				new FileInputStream(file), "UTF-8");// 考虑到编码格式
 		BufferedReader bufferedReader = new BufferedReader(read);
@@ -67,27 +75,36 @@ public class App {
 			int header = step1(arrSource);
 			boolean[] result = step2(strSource, header);
 
-			for (int i = 0; i < header + 1; i++)
+			StringBuilder sb = new StringBuilder();
+			for (int i = 0; i < header + 1; i++){
 				logger.debug("-");
+				sb.append("-");
+			}
+			FileOutput.write(sb.toString());
 			
+			sb = new StringBuilder();
 			boolean last = result[0];
 			int count = 1;
 			int countTrue = 0, countFalse = 0;
 			if(last){
 				countTrue ++ ;
 				logger.debug("o");
+				sb.append("o");
 			} else {
 				countFalse ++ ;
 				logger.debug("x");
+				sb.append("x");
 			}
 			
 			for(int i=1; i<result.length; i++){
 				if (result[i]) {
 					countTrue++;
 					logger.debug("o");
+					sb.append("o");
 				} else {
 					countFalse++;
 					logger.debug("x");
+					sb.append("x");
 				}
 				
 				if(result[i] == last){
@@ -104,14 +121,19 @@ public class App {
 					last = result[i];
 					count = 1;
 				}
-			}
+			} FileOutput.write(sb.toString());
 
 			logger.debug(" [ x:{} ({}%), o:{} ({}%) ]\r\n", 
 					countFalse, ((float)countFalse*100/(float)(countFalse+countTrue)), 
 					countTrue, ((float)countTrue*100/(float)(countFalse+countTrue)));
 			logger.debug("{}\r\n", strSource);
+			FileOutput.write(String.format(" [ x:%d (%f%%), o:%d (%f%%) ]\r\n",
+					countFalse, ((float)countFalse*100/(float)(countFalse+countTrue)), 
+					countTrue, ((float)countTrue*100/(float)(countFalse+countTrue))));
+			FileOutput.write(String.format("%s\r\n", strSource));
 
-			step3(result, header);
+			//step3(result, header);
+			step3x(result);
 		}
 		
 		int max = seq_x_max>seq_o_max?seq_x_max:seq_o_max;
@@ -119,11 +141,22 @@ public class App {
 			logger.debug("SEQ {} : {x:{}, o:{}}\r\n", i+1, addupX[i], addupO[i]);
 		}
 		read.close();
-
+		FileOutput.close();
+		
+		/*boolean[] source = new boolean[]{false,false,false,false,false,false,false,true,true,false,true};
+		step3x(source);*/
 	}
 
 	public static boolean pair(String first, String second) {
 		return pairEngine.pair(first, second);
+	}
+	
+	public static void step3x(boolean[] source){
+		
+		IProcessor processor = Start.findProcessor(source);
+		if(null != processor){
+			processor.execute();
+		}
 	}
 
 	public static void step3(boolean[] source, int length) {
@@ -203,12 +236,10 @@ public class App {
 			if (array[index] != last) {
 				last = array[index];
 				column++;
-				// System.out.println();
 			}
 
 			if (column <= COLUMN - 1)
 				rtn++;
-			// System.out.print(array[index]);
 		}
 		return rtn;
 	}
